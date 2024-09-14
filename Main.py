@@ -4,7 +4,6 @@ from discord.ext import commands
 from datetime import datetime, timedelta
 
 from dotenv import *
-
 load_dotenv()
 
 intents = discord.Intents.all()
@@ -109,6 +108,8 @@ async def info(ctx: discord.ApplicationContext):
 try:
     bot.load_extension("COGS.CommandLogger")
     print("[ + ] Command Logger Loaded")
+    bot.load_extension("COGS.StockMarket")
+    print("[ + ] Stock Market Loaded")
     bot.load_extension("COGS.Database")
     print("[ + ] Database Loaded\n")
 
