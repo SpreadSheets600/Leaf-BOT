@@ -108,7 +108,7 @@ async def info(ctx: discord.ApplicationContext):
 try:
     bot.load_extension("COGS.CommandLogger")
     print("[ + ] Command Logger Loaded")
-    bot.load_extension("COGS.StockMarket")
+    bot.load_extension("COGS.MarketInfo")
     print("[ + ] Stock Market Loaded")
     bot.load_extension("COGS.Database")
     print("[ + ] Database Loaded\n")

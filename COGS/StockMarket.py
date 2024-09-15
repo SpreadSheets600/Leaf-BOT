@@ -16,7 +16,7 @@ FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 
 
-class StockMarket(commands.Cog):
+class MarketInfo(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -105,4 +105,4 @@ class StockMarket(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(StockMarket(bot))
+    bot.add_cog(MarketInfo(bot))
