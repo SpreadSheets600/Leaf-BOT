@@ -205,7 +205,11 @@ class MarketInfo(commands.Cog):
                 df.set_index("Timestamp", inplace=True)
 
                 market_color = mpf.make_marketcolors(
-                    up="#49c686cc", down="#c2423fcc", volume="in",edge="inherit",inherit=True
+                    up="#49c686cc",
+                    down="#c2423fcc",
+                    volume="in",
+                    edge="inherit",
+                    inherit=True,
                 )
                 style = mpf.make_mpf_style(
                     base_mpf_style="mike", marketcolors=market_color
