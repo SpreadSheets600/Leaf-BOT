@@ -1,0 +1,11 @@
+{
+  "user_id": 727012870683885578,
+  "balance": 100000000000000000,
+  "crypto": {
+    "btc-bitcoin": {
+      "amt": 5,
+      "buy_price": 0
+    }
+  },
+  "transactions": []
+}

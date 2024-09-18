@@ -108,10 +108,13 @@ async def info(ctx: discord.ApplicationContext):
 try:
     bot.load_extension("COGS.CommandLogger")
     print("[ + ] Command Logger Loaded")
-    bot.load_extension("COGS.MarketInfo")
+    bot.load_extension("COGS.CryptoInfo")
     print("[ + ] Stock Market Loaded")
-    bot.load_extension("COGS.Database")
-    print("[ + ] Database Loaded\n")
+    bot.load_extension("COGS.Users")
+    print("[ + ] Users Loaded\n")
+    print()
+    bot.load_extension("ECONOMY.Transactions")
+    print("[ + ] CryptoBuy Loaded\n")
 
 except Exception as e:
     print(f"[ - ] COG Not Loadded : {e}\n")

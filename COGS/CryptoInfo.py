@@ -23,14 +23,14 @@ FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 
 
-class MarketInfo(commands.Cog):
+class CryptoInfo(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
         self.polygon = RESTClient(POLYGON_API_KEY)
         self.finnhub = finnhub.Client(api_key=FINNHUB_API_KEY)
 
-    market = SlashCommandGroup(name="market", description="Market Commands")
+    market = SlashCommandGroup(name="market", description="Crypto Commands")
 
     @market.command(name="search", description="Search For A Symbol")
     async def search(
@@ -122,36 +122,31 @@ class MarketInfo(commands.Cog):
             await ctx.respond(f"An Error Occurred : {e}", ephemeral=True)
 
     @market.command(name="chart", description="Get Chart For A Symbol")
-    @option(
-        "crytpo_symbol",
-        description="The Crypto Symbol",
-        choices=[
-            "XRUSDT",
-            "SOLUSDT",
-            "UNIUSDT",
-            "BTCUSDT",
-            "ADAUSDT",
-            "USDTUSDT",
-            "TONUSDT",
-            "DOTUSDT",
-            "ETHUSDT",
-            "LTCUSDT",
-            "DOGEUSDT",
-            "USDCUSDT",
-            "AVAXUSDT",
-            "LINKUSDT",
-            "BNBUSDT",
-        ],
-    )
     async def chart(
         self,
         ctx: discord.ApplicationContext,
-        crytpo_symbol: str = None,
+        symbol: str = None,
         interval: str = "1d",
         limit: int = 20,
     ):
+        if symbol is None:
+            embed = discord.Embed(
+                title="Error",
+                description="Please Enter A Symbol",
+                color=discord.Color.red(),
+            )
+            embed.add_field(
+                name="Format", value="**{ <symbol>-<name> }**", inline=False
+            )
+            embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+
+            return await ctx.respond(embed=embed, ephemeral=True)
+
+        await ctx.defer()
+
+        crytpo_symbol = symbol.split("-")[0].upper() + "USDT"
+
         try:
-            await ctx.defer()
 
             if crytpo_symbol:
                 url = f"https://api.binance.com/api/v3/klines?symbol={crytpo_symbol.upper()}&interval={interval}&limit={limit}"
@@ -171,9 +166,11 @@ class MarketInfo(commands.Cog):
                         color=discord.Color.red(),
                     )
                     embed.add_field(
-                        name="Format", value="**{ <symbol><currency> }**", inline=False
+                        name="Format", value="**{ <symbol>-<name> }**", inline=False
                     )
-                    embed.add_field(name="Example", value="**BTCUSDT**", inline=False)
+                    embed.add_field(
+                        name="Example", value="**btc-bitcoin**", inline=False
+                    )
 
                     await ctx.respond(embed=embed)
                     return
@@ -261,100 +258,6 @@ class MarketInfo(commands.Cog):
         except Exception as e:
             print(f"An Error Occurred: {e}")
 
-    @market.command(name="quote", description="Get Quote For A Symbol")
-    @option(
-        "symbol",
-        description="The Crypto Symbol",
-        choices=[
-            "XR - XRP",
-            "SOL - Solana",
-            "UNI - Uniswap",
-            "BTC - Bitcoin",
-            "ADA - Cardano",
-            "USDT - Tether",
-            "TON - Toncoin",
-            "DOT - Polkadot",
-            "ETH - Ethereum",
-            "LTC - Litecoin",
-            "DOGE - Dogecoin",
-            "USDC - USD Coin",
-            "AVAX - Avalanche",
-            "LINK - Chainlink",
-            "BNB - Binanace Coin",
-        ],
-    )
-    async def quote(
-        self, ctx: discord.ApplicationContext, symbol: str = None, custom_id: str = None
-    ):
-        await ctx.defer()
-
-        if symbol:
-            coinpaprika = Client()
-            symbol_main = symbol.replace(" ", "").lower()
-
-            data = coinpaprika.ticker(symbol_main)
-            coin = coinpaprika.coin(symbol_main)
-
-        elif custom_id:
-            coinpaprika = Client()
-
-            try:
-
-                custom_id = custom_id.lower()
-
-                data = coinpaprika.ticker(custom_id)
-                coin = coinpaprika.coin(custom_id)
-
-            except Exception as e:
-                print(f"Stock Market Error : {e}")
-
-                embed = discord.Embed(
-                    title="Error Wrong Symbol",
-                    description="Invalid Symbol",
-                    color=discord.Color.red(),
-                )
-
-                embed.add_field(
-                    name="Format", value="**{ <symbol>-<name> }**", inline=False
-                )
-                embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
-
-                return await ctx.respond(embed=embed)
-
-        try:
-            if data:
-                embed = discord.Embed(
-                    title=f"{data['name']} Quote",
-                    description=f"**Symbol :** {data['symbol']}\n\n"
-                    f"**Rank :** {data['rank']}\n"
-                    f"**Type :** {coin['type'].upper()}\n"
-                    f"### **Price :** $ {round(data['quotes']['USD']['price'],2):,}\n\n"
-                    f"**Max Supply :** {round(data['max_supply']):,}\n"
-                    f"**Total Supply :** {round(data['total_supply']):,}\n\n"
-                    f"**Volume :** {round(data['quotes']['USD']['volume_24h']):,}\n"
-                    f"**Market Cap :** {round(data['quotes']['USD']['market_cap']):,}\n\n",
-                    color=discord.Color.green(),
-                )
-
-                url = coin["logo"]
-
-                if url:
-                    embed.set_thumbnail(url=url)
-
-                await ctx.respond(embed=embed)
-
-            else:
-                embed = discord.Embed(
-                    title="Error",
-                    description="No Results Found",
-                    color=discord.Color.red(),
-                )
-
-                await ctx.respond(embed=embed)
-
-        except Exception as e:
-            print(f"Stock Market Error : {e}")
-
 
 def setup(bot):
-    bot.add_cog(MarketInfo(bot))
+    bot.add_cog(CryptoInfo(bot))
