@@ -3,7 +3,7 @@
   "balance": 99999999999757110,
   "crypto": {
     "btc-bitcoin": { "amt": 5, "buy_price": 0 },
-    "eth-ethereum": { "amt": 100, "buy_price": 2429, "transactions": [] }
+    "eth-ethereum": { "amt": 100, "buy_price": 2429}
   },
   "transactions": [
     "2024-09-19 20:31:50 Bought 10 eth-ethereum for $24280",

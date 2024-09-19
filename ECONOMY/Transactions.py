@@ -30,13 +30,12 @@ class Transactions(commands.Cog):
 
     def get_id(self, symbol):
 
-        symbol = symbol.lower()
+        symbol = symbol.upper()
 
         with open("Currency.json", "r") as f:
-            data = json.load(f)
+            coins = json.load(f)
 
-            if data["symbol"].lower() == symbol:
-                return data["id"]
+        return coins.get(symbol, {}).get("id", None)
 
     crypto = SlashCommandGroup(name="crypto", description="Crypto Commands")
 
@@ -53,10 +52,8 @@ class Transactions(commands.Cog):
                 description="Please Enter A Symbol",
                 color=discord.Color.red(),
             )
-            embed.add_field(
-                name="Format", value="**{ <symbol>-<name> }**", inline=False
-            )
-            embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+            embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+            embed.add_field(name="Example", value="**btc**", inline=False)
 
             return await ctx.respond(embed=embed, ephemeral=True)
 
@@ -79,10 +76,8 @@ class Transactions(commands.Cog):
                     color=discord.Color.red(),
                 )
 
-                embed.add_field(
-                    name="Format", value="**{ <symbol>-<name> }**", inline=False
-                )
-                embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+                embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+                embed.add_field(name="Example", value="**btc**", inline=False)
 
                 return await ctx.respond(embed=embed)
 
@@ -106,8 +101,8 @@ class Transactions(commands.Cog):
                 if url:
                     embed.set_thumbnail(url=url)
 
-                symbol = symbol.split("-")[0].upper() + "USDT"
-
+                symbol = symbol.upper() + "USDT"
+                print(symbol)
                 await ctx.respond(embed=embed, view=ViewChart(symbol))
 
             else:
@@ -132,10 +127,8 @@ class Transactions(commands.Cog):
                     description="Please Enter A Symbol",
                     color=discord.Color.red(),
                 )
-                embed.add_field(
-                    name="Format", value="**{ <symbol>-<name> }**", inline=False
-                )
-                embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+                embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+                embed.add_field(name="Example", value="**btcn**", inline=False)
 
                 return await ctx.respond(embed=embed, ephemeral=True)
 
@@ -154,7 +147,7 @@ class Transactions(commands.Cog):
             user = self.get_user(user_id)
 
             coinpaprika = Client()
-            coin = crypto.replace(" ", "").lower()
+            coin = self.get_id(crypto)
 
             data = coinpaprika.ticker(coin)
             price = round(data["quotes"]["USD"]["price"])
@@ -186,7 +179,6 @@ class Transactions(commands.Cog):
                 user["crypto"][coin] = {
                     "amt": amount,
                     "buy_price": price,
-                    "transactions": [],
                 }
 
                 time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -217,92 +209,103 @@ class Transactions(commands.Cog):
                 description="Please Enter A Symbol",
                 color=discord.Color.red(),
             )
-            embed.add_field(
-                name="Format", value="**{ <symbol>-<name> }**", inline=False
-            )
-            embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+            embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+            embed.add_field(name="Example", value="**btc**", inline=False)
 
             await ctx.respond(embed=embed, ephemeral=True)
 
     @crypto.command(name="sell", description="Sell Crypto")
     async def sell(self, ctx, crypto: str = None, amount: int = None):
 
-        if not crypto:
+        try:
+
+            if not crypto:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter A Symbol",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+                embed.add_field(name="Example", value="**btc**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            if not amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter An Amount",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="Format", value="**{ <amount> }**", inline=False)
+                embed.add_field(name="Example", value="**100**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            user_id = ctx.author.id
+            user = self.get_user(user_id)
+
+            coinpaprika = Client()
+            coin = self.get_id(crypto)
+
+            data = coinpaprika.ticker(coin)
+            price = round(data["quotes"]["USD"]["price"])
+
+            if coin not in user["crypto"]:
+                embed = discord.Embed(
+                    title="Error",
+                    description="You Do Not Own This Crypto",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            if user["crypto"][coin]["amt"] < amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="You Do Not Have Enough Crypto",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            user["balance"] += price * amount
+            user["crypto"] = user.get("crypto", {})
+
+            time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            user["crypto"][coin]["amt"] -= amount
+            user["crypto"][coin]["sell_price"] = price
+
+            transactions = user["transactions"]
+            transactions.append(f"{time} Sold {amount} {coin} For ${price * amount}")
+
+            with open(f"Users/{user_id}.json", "w") as f:
+                json.dump(user, f)
+
+            coin = data["symbol"]
+
+            embed = discord.Embed(
+                title="Crypto Sold",
+                description=f"You Have Sold {amount} {coin} For ${price * amount}",
+                color=discord.Color.green(),
+            )
+
+            embed.add_field(name="Balance", value=f"${user['balance']}", inline=False)
+
+            await ctx.respond(embed=embed)
+
+        except Exception as e:
+            print(f"Stock Market Error : {e}")
+
             embed = discord.Embed(
                 title="Error",
                 description="Please Enter A Symbol",
                 color=discord.Color.red(),
             )
-            embed.add_field(
-                name="Format", value="**{ <symbol>-<name> }**", inline=False
-            )
-            embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+            embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+            embed.add_field(name="Example", value="**btc**", inline=False)
 
-            return await ctx.respond(embed=embed, ephemeral=True)
-
-        if not amount:
-            embed = discord.Embed(
-                title="Error",
-                description="Please Enter An Amount",
-                color=discord.Color.red(),
-            )
-            embed.add_field(name="Format", value="**{ <amount> }**", inline=False)
-            embed.add_field(name="Example", value="**100**", inline=False)
-
-            return await ctx.respond(embed=embed, ephemeral=True)
-
-        user_id = ctx.author.id
-        user = self.get_user(user_id)
-
-        coinpaprika = Client()
-        coin = crypto.replace(" ", "").lower()
-
-        data = coinpaprika.ticker(coin)
-        price = round(data["quotes"]["USD"]["price"])
-
-        if coin not in user["crypto"]:
-            embed = discord.Embed(
-                title="Error",
-                description="You Do Not Own This Crypto",
-                color=discord.Color.red(),
-            )
-
-            return await ctx.respond(embed=embed)
-
-        if user["crypto"][coin]["amt"] < amount:
-            embed = discord.Embed(
-                title="Error",
-                description="You Do Not Have Enough Crypto",
-                color=discord.Color.red(),
-            )
-
-            return await ctx.respond(embed=embed)
-
-        user["balance"] += price * amount
-        user["crypto"] = user.get("crypto", {})
-
-        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        user["crypto"][coin]["amt"] -= amount
-        user["crypto"][coin]["sell_price"] = price
-
-        transactions = user["transactions"]
-        transactions.append(f"{time} Sold {amount} {coin} For ${price * amount}")
-
-        with open(f"Users/{user_id}.json", "w") as f:
-            json.dump(user, f)
-
-        coin = data["symbol"]
-
-        embed = discord.Embed(
-            title="Crypto Sold",
-            description=f"You Have Sold {amount} {coin} For ${price * amount}",
-            color=discord.Color.green(),
-        )
-
-        embed.add_field(name="Balance", value=f"${user['balance']}", inline=False)
-
-        await ctx.respond(embed=embed)
+            await ctx.respond(embed=embed, ephemeral=True)
 
     @crypto.command(name="transactions", description="View Crypto Transactions")
     async def transactions(self, ctx):
@@ -356,12 +359,15 @@ class Transactions(commands.Cog):
             if coin == "transactions":
                 continue
 
+            PNL = (data["amt"] * data["sell_price"]) - (data["amt"] * data["buy_price"])
+
             embed.add_field(
                 name=f"{coin.upper()}",
                 value=(
                     f"**Amount :** {data['amt']}\n"
-                    f"**Buy Price :** ${data['buy_price']}\n"
-                    f"**Sell Price :** ${data.get('sell_price', 'N/A')}\n"
+                    f"**Buy Price :** $ {data['buy_price']}\n"
+                    f"**Sell Price :** $ {data.get('sell_price', 'N/A')}\n"
+                    f"**Profit / Loss :** $ {PNL}\n"
                 ),
                 inline=False,
             )
