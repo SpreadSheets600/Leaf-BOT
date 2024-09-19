@@ -28,6 +28,16 @@ class Transactions(commands.Cog):
         with open(f"Users/{user_id}.json", "w") as f:
             json.dump(data, f)
 
+    def get_id(self, symbol):
+
+        symbol = symbol.lower()
+
+        with open("Currency.json", "r") as f:
+            data = json.load(f)
+
+            if data["symbol"].lower() == symbol:
+                return data["id"]
+
     crypto = SlashCommandGroup(name="crypto", description="Crypto Commands")
 
     @crypto.command(name="quote", description="Get Crypto Quote")
@@ -36,6 +46,7 @@ class Transactions(commands.Cog):
         ctx: discord.ApplicationContext,
         symbol: str = None,
     ):
+
         if symbol is None:
             embed = discord.Embed(
                 title="Error",
@@ -54,7 +65,7 @@ class Transactions(commands.Cog):
         if symbol:
             try:
                 coinpaprika = Client()
-                symbol_main = symbol.replace(" ", "").lower()
+                symbol_main = self.get_id(symbol)
 
                 data = coinpaprika.ticker(symbol_main)
                 coin = coinpaprika.coin(symbol_main)
