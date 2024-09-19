@@ -1,11 +1,12 @@
 {
   "user_id": 727012870683885578,
-  "balance": 100000000000000000,
+  "balance": 99999999999757110,
   "crypto": {
-    "btc-bitcoin": {
-      "amt": 5,
-      "buy_price": 0
-    }
+    "btc-bitcoin": { "amt": 5, "buy_price": 0 },
+    "eth-ethereum": { "amt": 100, "buy_price": 2429, "transactions": [] }
   },
-  "transactions": []
+  "transactions": [
+    "2024-09-19 20:31:50 Bought 10 eth-ethereum for $24280",
+    "2024-09-19 20:32:04 Bought 90 eth-ethereum For $218610"
+  ]
 }

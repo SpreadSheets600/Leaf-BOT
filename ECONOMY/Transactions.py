@@ -114,7 +114,93 @@ class Transactions(commands.Cog):
     @crypto.command(name="buy", description="Buy Crypto")
     async def buy(self, ctx, crypto: str = None, amount: int = None):
 
-        if not crypto:
+        try:
+            if not crypto:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter A Symbol",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(
+                    name="Format", value="**{ <symbol>-<name> }**", inline=False
+                )
+                embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            if not amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter An Amount",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="Format", value="**{ <amount> }**", inline=False)
+                embed.add_field(name="Example", value="**100**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            user_id = ctx.author.id
+            user = self.get_user(user_id)
+
+            coinpaprika = Client()
+            coin = crypto.replace(" ", "").lower()
+
+            data = coinpaprika.ticker(coin)
+            price = round(data["quotes"]["USD"]["price"])
+
+            if user["balance"] < price * amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Insufficient Balance",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            user["balance"] -= price * amount
+            user["crypto"] = user.get("crypto", {})
+
+            time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if coin in user["crypto"]:
+                user["crypto"][coin]["amt"] += amount
+                user["crypto"][coin]["buy_price"] = price
+
+                transactions = user["transactions"]
+                transactions.append(
+                    f"{time} Bought {amount} {coin} For ${price * amount}"
+                )
+
+            else:
+                user["crypto"][coin] = {
+                    "amt": amount,
+                    "buy_price": price,
+                    "transactions": [],
+                }
+
+                time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                user["transactions"].append(
+                    f"{time} Bought {amount} {coin} for ${price * amount}"
+                )
+
+            with open(f"Users/{user_id}.json", "w") as f:
+                json.dump(user, f)
+
+            coin = data["symbol"]
+
+            embed = discord.Embed(
+                title="Crypto Bought",
+                description=f"You Have Bought {amount} {coin} For ${price * amount}",
+                color=discord.Color.green(),
+            )
+
+            embed.add_field(name="Balance", value=f"${user['balance']}", inline=False)
+
+            await ctx.respond(embed=embed)
+
+        except Exception as e:
+            print(f"Stock Market Error : {e}")
+
             embed = discord.Embed(
                 title="Error",
                 description="Please Enter A Symbol",
@@ -125,75 +211,7 @@ class Transactions(commands.Cog):
             )
             embed.add_field(name="Example", value="**btc-bitcoin**", inline=False)
 
-            return await ctx.respond(embed=embed, ephemeral=True)
-
-        if not amount:
-            embed = discord.Embed(
-                title="Error",
-                description="Please Enter An Amount",
-                color=discord.Color.red(),
-            )
-            embed.add_field(name="Format", value="**{ <amount> }**", inline=False)
-            embed.add_field(name="Example", value="**100**", inline=False)
-
-            return await ctx.respond(embed=embed, ephemeral=True)
-
-        user_id = ctx.author.id
-        user = self.get_user(user_id)
-
-        coinpaprika = Client()
-        coin = crypto.replace(" ", "").lower()
-
-        data = coinpaprika.ticker(coin)
-        price = round(data["quotes"]["USD"]["price"])
-
-        if user["balance"] < price * amount:
-            embed = discord.Embed(
-                title="Error",
-                description="Insufficient Balance",
-                color=discord.Color.red(),
-            )
-
-            return await ctx.respond(embed=embed)
-
-        user["balance"] -= price * amount
-        user["crypto"] = user.get("crypto", {})
-
-        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        if coin in user["crypto"]:
-            user["crypto"][coin]["amt"] += amount
-            user["crypto"][coin]["buy_price"] = price
-
-            transactions = user["crypto"]["transactions"]
-            transactions.append(f"{time} Bought {amount} {coin} For ${price * amount}")
-
-        else:
-            user["crypto"][coin] = {
-                "amt": amount,
-                "buy_price": price,
-                "transactions": [],
-            }
-
-            time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            user["crypto"]["transactions"].append(
-                f"{time} Bought {amount} {coin} for ${price * amount}"
-            )
-
-        with open(f"Users/{user_id}.json", "w") as f:
-            json.dump(user, f)
-
-        coin = data["symbol"]
-
-        embed = discord.Embed(
-            title="Crypto Bought",
-            description=f"You Have Bought {amount} {coin} For ${price * amount}",
-            color=discord.Color.green(),
-        )
-
-        embed.add_field(name="Balance", value=f"${user['balance']}", inline=False)
-
-        await ctx.respond(embed=embed)
+            await ctx.respond(embed=embed, ephemeral=True)
 
     @crypto.command(name="sell", description="Sell Crypto")
     async def sell(self, ctx, crypto: str = None, amount: int = None):
@@ -257,7 +275,7 @@ class Transactions(commands.Cog):
         user["crypto"][coin]["amt"] -= amount
         user["crypto"][coin]["sell_price"] = price
 
-        transactions = user["crypto"]["transactions"]
+        transactions = user["transactions"]
         transactions.append(f"{time} Sold {amount} {coin} For ${price * amount}")
 
         with open(f"Users/{user_id}.json", "w") as f:
@@ -277,30 +295,68 @@ class Transactions(commands.Cog):
 
     @crypto.command(name="transactions", description="View Crypto Transactions")
     async def transactions(self, ctx):
-            
-            user_id = ctx.author.id
-            user = self.get_user(user_id)
-    
-            transactions = user.get("crypto", {}).get("transactions", [])
-    
-            if not transactions:
-                embed = discord.Embed(
-                    title="No Transactions",
-                    description="You Have No Transactions",
-                    color=discord.Color.red(),
-                )
-    
-                return await ctx.respond(embed=embed)
-            
+
+        user_id = ctx.author.id
+        user = self.get_user(user_id)
+
+        transactions = user.get("transactions", [])
+
+        if not transactions:
             embed = discord.Embed(
-                title="Transactions",
-                color=discord.Color.green(),
+                title="No Transactions",
+                description="You Have No Transactions",
+                color=discord.Color.red(),
             )
 
-            for transaction in transactions:
-                embed.add_field(name="Transaction", value=transaction, inline=False)
+            return await ctx.respond(embed=embed)
 
-            await ctx.respond(embed=embed)
+        embed = discord.Embed(
+            title="Transactions",
+            color=discord.Color.green(),
+        )
+
+        for transaction in transactions:
+            embed.add_field(name="Transaction", value=transaction, inline=False)
+
+        await ctx.respond(embed=embed)
+
+    @crypto.command(name="portfolio", description="View Crypto Portfolio")
+    async def portfolio(self, ctx):
+        user_id = ctx.author.id
+        user = self.get_user(user_id)
+
+        crypto = user.get("crypto", {})
+
+        if not crypto:
+            embed = discord.Embed(
+                title="No Portfolio",
+                description="You Have No Portfolio",
+                color=discord.Color.red(),
+            )
+
+            return await ctx.respond(embed=embed)
+
+        embed = discord.Embed(
+            title="Portfolio",
+            color=discord.Color.green(),
+        )
+
+        for coin, data in crypto.items():
+            if coin == "transactions":
+                continue
+
+            embed.add_field(
+                name=f"{coin.upper()}",
+                value=(
+                    f"**Amount :** {data['amt']}\n"
+                    f"**Buy Price :** ${data['buy_price']}\n"
+                    f"**Sell Price :** ${data.get('sell_price', 'N/A')}\n"
+                ),
+                inline=False,
+            )
+
+        await ctx.respond(embed=embed)
+
 
 class ViewChart(discord.ui.View):
     def __init__(self, currency):
