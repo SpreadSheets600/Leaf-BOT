@@ -4,6 +4,7 @@ from discord.ext import commands
 from datetime import datetime, timedelta
 
 from dotenv import *
+
 load_dotenv()
 
 intents = discord.Intents.all()
@@ -115,7 +116,12 @@ try:
     print()
     bot.load_extension("ECONOMY.Transactions")
     print("[ + ] CryptoBuy Loaded\n")
-
+    print()
+    bot.load_extension("COGS.Tasks")
+    print("[ + ] Tasks Loaded\n")
+    print()
+    bot.load_extension("UTILS.TasksDisplay")
+    print("[ + ] TasksDisplay Loaded\n")
 except Exception as e:
     print(f"[ - ] COG Not Loadded : {e}\n")
 
