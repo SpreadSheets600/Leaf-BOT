@@ -1,5 +1,6 @@
 import os
 import discord
+import traceback
 from discord.ext import commands
 from datetime import datetime, timedelta
 
@@ -120,9 +121,8 @@ try:
     bot.load_extension("COGS.Tasks")
     print("[ + ] Tasks Loaded\n")
     print()
-    bot.load_extension("UTILS.TasksDisplay")
-    print("[ + ] TasksDisplay Loaded\n")
 except Exception as e:
     print(f"[ - ] COG Not Loadded : {e}\n")
+    traceback.print_exc()
 
 bot.run(os.getenv("TOKEN"))
