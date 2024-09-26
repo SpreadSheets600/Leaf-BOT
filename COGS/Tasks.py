@@ -1,3 +1,4 @@
+import json
 import asyncio
 import discord
 import sqlite3
@@ -28,6 +29,12 @@ class Tasks(commands.Cog):
 
     def cog_unload(self):
         self.check_reminders.cancel()
+
+    def forum_channel(self, user_id):
+        with open("DATA/Forums.json", "r") as f:
+            forum_channel = json.load(f)
+
+        return forum_channel[user_id]
 
     task = SlashCommandGroup(
         name="task",
@@ -89,15 +96,13 @@ class Tasks(commands.Cog):
             remind_time = remind_time_obj.timestamp()
             discord_timestamp = f"<t:{int(remind_time)}:R>"
 
-        const_forum_message = {
-            727012870683885578: 1287770126376243200,
-            437622938242514945: 1288535756163252365,
-        }
-
-        if assigned_to.id in const_forum_message:
-            forum_id = const_forum_message[assigned_to.id]
-        else:
-            message_id = 0
+        forum_id = self.forum_channel(str(assigned_to.id))
+        if not forum_id:
+            await ctx.respond(
+                "Forum Channel For The User Not Found ... Beep Boop \nDid You Even Register ?!",
+                ephemeral=True,
+            )
+            return
 
         # Insert Task Into The Database
         c.execute(
@@ -143,6 +148,7 @@ class Tasks(commands.Cog):
             # Get The Task From The Database
             c.execute("SELECT * FROM Tasks WHERE id = ?", (task_number,))
             task = c.fetchone()
+
         except sqlite3.Error as e:
             # Handle Database Error
             await ctx.respond(
@@ -161,16 +167,13 @@ class Tasks(commands.Cog):
         assigned_to = task[2]
 
         # Constant Mapping For Forum Channel
-        const_forum_message = {
-            727012870683885578: 1287770126376243200,
-            437622938242514945: 1288535756163252365,
-        }
-
-        # Get The Forum Channel ID For The Assigned Member
-        forum_id = const_forum_message.get(assigned_to)
+        forum_id = self.forum_channel(str(assigned_to))
 
         if not forum_id:
-            await ctx.respond("Forum Channel For The User Not Found", ephemeral=True)
+            await ctx.respond(
+                "Forum Channel For The User Not Found .... Beep Boop\nDid You Even Register ?!",
+                ephemeral=True,
+            )
             return
 
         # Get The Forum Channel
@@ -270,10 +273,14 @@ class Tasks(commands.Cog):
     )
     async def remind(self, ctx, task_number: int, remind_time: str):
 
-        const_forum_message = {
-            727012870683885578: 1287770126376243200,
-            437622938242514945: 1288535756163252365,
-        }
+        forum_id = self.forum_channel(str(ctx.author.id))
+
+        if not forum_id:
+            await ctx.respond(
+                "Forum Channel For The User Not Found ... Beep Boop \nDid You Even Register ?!",
+                ephemeral=True,
+            )
+            return
 
         # Get The Task From The Database
         c.execute("SELECT * FROM Tasks WHERE id = ?", (task_number,))
@@ -318,13 +325,6 @@ class Tasks(commands.Cog):
 
         # Get The Assigned Member ID
         assigned_to = task[2]
-
-        # Get The Forum Channel ID For That Memeber
-        if assigned_to in const_forum_message:
-            forum_id = const_forum_message[assigned_to]
-        else:
-            await ctx.respond("Task Not Found ... Beep Booop", ephemeral=True)
-            return
 
         # Get The Forum Channel
         channel = self.bot.get_channel(forum_id)
@@ -374,14 +374,9 @@ class Tasks(commands.Cog):
             forum_message_id = task[4]
 
             # Get The Forum Channel ID For That Memeber
-            const_forum_message = {
-                727012870683885578: 1287770126376243200,
-                437622938242514945: 1288535756163252365,
-            }
+            forum_id = self.forum_channel(str(assigned_to))
 
-            if assigned_to in const_forum_message:
-                forum_id = const_forum_message[assigned_to]
-            else:
+            if not forum_id:
                 continue
 
             # Get The Channel And Message

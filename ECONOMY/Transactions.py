@@ -2,6 +2,7 @@ import io
 import json
 import discord
 import requests
+import traceback
 import pandas as pd
 import mplfinance as mpf
 from discord.ext.pages import *
@@ -118,7 +119,7 @@ class Transactions(commands.Cog):
             print(f"Stock Market Error : {e}")
 
     @crypto.command(name="buy", description="Buy Crypto")
-    async def buy(self, ctx, crypto: str = None, amount: int = None):
+    async def buy(self, ctx, crypto: str = None, amount: float = None):
 
         try:
             if not crypto:
@@ -181,9 +182,11 @@ class Transactions(commands.Cog):
                     "buy_price": price,
                 }
 
-                time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Discord Timestamp String
+                discord_timestamp = f"<t:{int(datetime.now().timestamp())}:R>"
+
                 user["transactions"].append(
-                    f"{time} Bought {amount} {coin} for ${price * amount}"
+                    f"{discord_timestamp} - Bought {amount} {coin} For ${price * amount}"
                 )
 
             with open(f"Users/{user_id}.json", "w") as f:
@@ -215,7 +218,7 @@ class Transactions(commands.Cog):
             await ctx.respond(embed=embed, ephemeral=True)
 
     @crypto.command(name="sell", description="Sell Crypto")
-    async def sell(self, ctx, crypto: str = None, amount: int = None):
+    async def sell(self, ctx, crypto: str = None, amount: float = None):
 
         try:
 
@@ -271,7 +274,7 @@ class Transactions(commands.Cog):
             user["balance"] += price * amount
             user["crypto"] = user.get("crypto", {})
 
-            time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            time = f"<t:{int(datetime.now().timestamp())}:R>"
 
             user["crypto"][coin]["amt"] -= amount
             user["crypto"][coin]["sell_price"] = price
@@ -359,20 +362,152 @@ class Transactions(commands.Cog):
             if coin == "transactions":
                 continue
 
-            PNL = (data["amt"] * data["sell_price"]) - (data["amt"] * data["buy_price"])
+            coinpaprika = Client()
+            coin_data = coinpaprika.ticker(coin)
+
+            sell_price = coin_data["quotes"]["USD"]["price"]
+
+            PNL = (data["amt"] * data["buy_price"]) - (data["amt"] * sell_price)
+
+            previos_price = data.get("sell_price", 0)
 
             embed.add_field(
                 name=f"{coin.upper()}",
                 value=(
-                    f"**Amount :** {data['amt']}\n"
-                    f"**Buy Price :** $ {data['buy_price']}\n"
-                    f"**Sell Price :** $ {data.get('sell_price', 'N/A')}\n"
-                    f"**Profit / Loss :** $ {PNL}\n"
+                    f"**Amount :** {data['amt']}\n\n"
+                    f"**Buy Price :** $ {data['buy_price']}\n\n"
+                    f"**Current Price :** $ {sell_price}\n"
+                    f"**Profit / Loss :** $ {round(PNL,2)}\n\n"
+                    f"**Previous Price :** $ {previos_price}\n"
                 ),
                 inline=False,
             )
 
         await ctx.respond(embed=embed)
+
+    @crypto.command(name="send", description="Send Crypto To Another User")
+    async def send(
+        self, ctx, user: discord.User, crypto: str = None, amount: float = None
+    ):
+        try:
+            if not crypto:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter A Symbol",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="Format", value="**{ <symbol> }**", inline=False)
+                embed.add_field(name="Example", value="**btc**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            if not amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="Please Enter An Amount",
+                    color=discord.Color.red(),
+                )
+                embed.add_field(name="Format", value="**{ <amount> }**", inline=False)
+                embed.add_field(name="Example", value="**100**", inline=False)
+
+                return await ctx.respond(embed=embed, ephemeral=True)
+
+            user_id_1 = ctx.author.id
+            user_1 = self.get_user(user_id_1)
+
+            user_id_2 = user.id
+            try: 
+                user_2 = self.get_user(user_id_2)
+            except:
+                embed = discord.Embed(
+                    title="Error",
+                    description="User Not Found",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            coinpaprika = Client()
+            coin = self.get_id(crypto)
+
+            data = coinpaprika.ticker(coin)
+            price = round(data["quotes"]["USD"]["price"])
+
+            if coin not in user_1["crypto"]:
+                embed = discord.Embed(
+                    title="Error",
+                    description="You Do Not Own This Crypto",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            if user_1["crypto"][coin]["amt"] < amount:
+                embed = discord.Embed(
+                    title="Error",
+                    description="You Do Not Have Enough Crypto",
+                    color=discord.Color.red(),
+                )
+
+                return await ctx.respond(embed=embed)
+
+            user_1["crypto"] = user_1.get("crypto", {})
+
+            time = f"<t:{int(datetime.now().timestamp())}:R>"
+
+            network_charge = (price * amount) * 0.03
+            user_1["balance"] -= network_charge  #
+
+            user_1["crypto"][coin]["amt"] -= amount
+            user_1["crypto"][coin]["sell_price"] = price
+
+            transactions_1 = user_1["transactions"]
+            transactions_1.append(
+                f"{time} Deducted ${network_charge} As Network Charge"
+            )
+            transactions_1.append(
+                f"{time} Gave {amount} {coin} For ${price * amount} To <@{user_id_2}>"
+            )
+
+            with open(f"Users/{user_id_1}.json", "w") as f:
+                json.dump(user_1, f)
+
+            user_2["crypto"] = user_2.get("crypto", {})
+            user_2["crypto"][coin] = user_2["crypto"].get(coin, {"amt": 0})
+            user_2["crypto"][coin]["amt"] += amount
+
+            transactions_2 = user_2["transactions"]
+            transactions_2.append(
+                f"{time} Received {amount} {coin} For ${price * amount} From <@{user_id_1}>"
+            )
+
+            with open(f"Users/{user_id_2}.json", "w") as f:
+                json.dump(user_2, f)
+
+            coin_symbol = data["symbol"]
+            balance = user_1["balance"]
+
+            embed = discord.Embed(
+                title="Crypto Sent",
+                description=(
+                    f"You Have Given {amount} {coin_symbol} For ${price * amount} To <@{user_id_2}>\n"
+                    f"**Network Charge:** ${network_charge}"
+                ),
+                color=discord.Color.green(),
+            )
+            embed.add_field(name="Balance", value=f"${balance}", inline=False)
+
+            await ctx.respond(embed=embed)
+
+        except Exception as e:
+            print(f"Crypto Transfer Error: {e}")
+
+            embed = discord.Embed(
+                title="Error",
+                description="An Error Occurred While Doing The Transaction",
+                color=discord.Color.red(),
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
 
 
 class ViewChart(discord.ui.View):

@@ -1,12 +1,1 @@
-{
-  "user_id": 727012870683885578,
-  "balance": 99999999999757110,
-  "crypto": {
-    "btc-bitcoin": { "amt": 5, "buy_price": 0 },
-    "eth-ethereum": { "amt": 100, "buy_price": 2429}
-  },
-  "transactions": [
-    "2024-09-19 20:31:50 Bought 10 eth-ethereum for $24280",
-    "2024-09-19 20:32:04 Bought 90 eth-ethereum For $218610"
-  ]
-}
+{"user_id": 727012870683885578, "balance": 9999999959361.4, "crypto": {"btc-bitcoin": {"amt": 79, "buy_price": 0, "sell_price": 65249}}, "transactions": ["<t:1727373236:R> Deducted $9799.5 As Network Charge", "<t:1727373236:R> Gave 5 btc-bitcoin For $326650 To <@437622938242514945>", "<t:1727373409:R> Deducted $1957.05 As Network Charge", "<t:1727373409:R> Gave 1 btc-bitcoin For $65235 To <@509648898655256576>", "<t:1727373648:R> Deducted $9787.35 As Network Charge", "<t:1727373648:R> Gave 5 btc-bitcoin For $326245 To <@437622938242514945>", "<t:1727373781:R> Deducted $19574.7 As Network Charge", "<t:1727373781:R> Gave 10 btc-bitcoin For $652490 To <@509648898655256576>"]}
