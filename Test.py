@@ -1,20 +1,16 @@
+import os
 import json
+import asyncio
+import aiohttp
+import requests
 
-def get_forum_channel(user_id):
-    with open("DATA/Forums.json", "r") as f:
-        data = json.load(f)
+from AnilistPython import Anilist
 
-    return data[user_id]
+Anilist = Anilist()
 
-print(get_forum_channel("1234"))
-
-def update_forum_channel(user_id, channel_id):
-    with open("DATA/Forums.json", "r") as f:
-        data = json.load(f)
-
-    data[user_id] = channel_id
-
-    with open("DATA/Forums.json", "w") as f:
-        json.dump(data, f)
-
-update_forum_channel("1234sad", 5678)
+anime_dict = Anilist.get_anime(anime_name="one piece", deepsearch=True)
+print()
+anime_id = Anilist.get_anime_id("one piece")
+print(anime_dict)
+print()
+print(anime_id)
