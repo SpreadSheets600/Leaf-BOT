@@ -4,6 +4,8 @@ import traceback
 from discord.ext import commands
 from datetime import datetime, timedelta
 
+from UTILS.KeepAlive import keep_alive
+
 from dotenv import *
 
 load_dotenv()
@@ -110,7 +112,7 @@ async def info(ctx: discord.ApplicationContext):
 try:
     bot.load_extension("COGS.CommandLogger")
     print("[ + ] Command Logger Loaded")
-    bot.load_extension("COGS.CryptoInfo")
+    bot.load_extension("ECONOMY.CryptoInfo")
     print("[ + ] Stock Market Loaded")
     bot.load_extension("COGS.Users")
     print("[ + ] Users Loaded")
@@ -124,4 +126,5 @@ except Exception as e:
     print(f"[ - ] COG Not Loadded : {e}\n")
     traceback.print_exc()
 
+keep_alive()
 bot.run(os.getenv("TOKEN"))

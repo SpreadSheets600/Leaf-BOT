@@ -25,12 +25,12 @@ class Anime(commands.Cog):
     anime = SlashCommandGroup(name="anime", description="Anime Commands")
 
     @anime.command(name="search", description="Get Information About An Anime")
-    async def search(self, ctx, *, anime_name: str):
+    async def search(self, ctx, *, name: str):
 
         await ctx.defer()
 
         try:
-            anime_dict = self.anilist.get_anime(anime_name=anime_name, deepsearch=True)
+            anime_dict = self.anilist.get_anime(anime_name=name, deepsearch=True)
             anime_id = self.anilist.get_anime_id(anime_name)
 
             if not anime_dict or not anime_id:
@@ -86,6 +86,101 @@ class Anime(commands.Cog):
         except Exception as e:
             await ctx.respond("Anime Not Found")
             print(f"Error : {e}")
+
+    @anime.command(name="watch", description="Watch Anime")
+    async def watch(self, ctx, *, name: str, episode: int = 1):
+        await ctx.defer()
+
+        try:
+            season = None
+
+            if name.split(" ")[-1] in [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "0",
+            ]:
+                if name.split(" ")[-1] == "1":
+                    season = "1st"
+                elif name.split(" ")[-1] == "2":
+                    season = "2nd"
+                elif name.split(" ")[-1] == "3":
+                    season = "3rd"
+                else:
+                    season = name.split(" ")[-1] + "th"
+
+            anime_dict = self.anilist.get_anime(anime_name=name[:-1], deepsearch=True)
+            anime_name = anime_dict["name_romaji"].replace(" ", "-").lower()
+            eng_name = anime_dict["name_english"]
+
+            cover_image = anime_dict["banner_image"]
+
+            try:
+                current_ep = anime_dict["next_airing_ep"]["episode"] - 1
+
+                if episode > current_ep:
+                    await ctx.respond("Episode Not Yet Aired")
+                    return
+            except:
+                current_ep = None
+
+            name = anime_dict["name_romaji"].replace(" ", "-").lower()
+
+            if season:
+                anime_name = f"{name}-{season}-season"
+
+                print(anime_name)
+
+            url = f"https://astrumanimeapi.vercel.app/anime/gogoanime/watch/{anime_name}-episode-{episode}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        streaming_link = data.get("sources", {})
+                        streaming_link = streaming_link[-1]
+                        streaming_link = streaming_link.get("url", None)
+
+                        if streaming_link:
+                            anime_title = anime_name.replace("-", " ").capitalize()
+
+                            flask_host = "http://192.168.0.105:5000"
+                            watch_url = (
+                                f"{flask_host}/watch?stream_link={streaming_link}"
+                            )
+
+                            embed = discord.Embed(
+                                title=f"Anime: {eng_name} | Episode: {episode}",
+                                color=discord.Color.blue(),
+                            )
+
+                            embed.add_field(
+                                name="Watch Now",
+                                value=f"[Click Here]({watch_url})",
+                                inline=False,
+                            )
+
+                            embed.set_image(url=cover_image)
+
+                            await ctx.respond(embed=embed)
+
+                        else:
+                            await ctx.respond(
+                                "No Streaming Link Found For This Episode"
+                            )
+                    else:
+                        await ctx.respond(
+                            f"Failed To Fetch Streaming Link: {response.status}"
+                        )
+        except Exception as e:
+            await ctx.respond(f"An Error Occurred : {e}")
+            traceback.print_exc()
 
 
 def setup(bot):

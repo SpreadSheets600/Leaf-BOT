@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Anime Viewer</title>
+    <link
+      href="https://vjs.zencdn.net/7.20.3/video-js.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .video-container {
+        width: 80%;
+        max-width: 1280px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      }
+      h1 {
+        margin-bottom: 20px;
+      }
+      .quality-selector {
+        margin-top: 20px;
+      }
+      select {
+        padding: 5px 10px;
+        font-size: 16px;
+        background-color: #333;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Anime Leaf Ke Laude Me</h1>
+    <div class="video-container">
+      <video-js
+        id="anime-player"
+        class="video-js vjs-big-play-centered vjs-theme-city"
+        controls
+        preload="auto"
+        width="100%"
+        height="0"
+        data-setup='{"fluid": true, "playbackRates": [0.5, 1, 1.5, 2]}'
+      >
+        <source src="{{ stream_link }}" type="application/x-mpegURL" />
+      </video-js>
+    </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-quality-levels/2.1.0/videojs-contrib-quality-levels.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-http-source-selector/1.1.6/videojs-http-source-selector.min.js"></script>
+    <script>
+      var player = videojs("anime-player");
+      player.httpSourceSelector();
+
+      player.on("loadedmetadata", function () {
+        var qualityLevels = player.qualityLevels();
+        var qualitySelect = document.getElementById("quality-select");
+
+        for (var i = 0; i < qualityLevels.length; i++) {
+          var option = document.createElement("option");
+          option.value = i;
+          option.text = qualityLevels[i].height + "p";
+          qualitySelect.add(option);
+        }
+
+        qualitySelect.addEventListener("change", function () {
+          for (var i = 0; i < qualityLevels.length; i++) {
+            qualityLevels[i].enabled = this.value === "auto" || i == this.value;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
