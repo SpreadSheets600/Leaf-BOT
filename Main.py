@@ -22,6 +22,7 @@ async def on_ready():
     bot.start_time = start_time
     bot.up_time = up_time
 
+    print()
     print("========== LEAF KA BOT ==========")
     print("Bot Name : ", bot.user.name)
     print("Bot ID : ", bot.user.id)
