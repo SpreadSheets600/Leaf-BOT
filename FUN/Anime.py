@@ -3,18 +3,17 @@ import asyncio
 import discord
 import aiohttp
 import traceback
-import crunpyroll
+from discord import ui
 from discord import option
 from discord.ext import pages
 from dotenv import load_dotenv
 from discord.ext.pages import *
 from discord.ext import commands
 from AnilistPython import Anilist
-from AnilistPython import Anilist
 from discord.ui import Button, View
 from discord import SlashCommandGroup
 
-
+anilist = Anilist()
 load_dotenv()
 
 
@@ -45,6 +44,27 @@ async def nwaifu(tag: str):
                     image_url = data["url"]
 
                     return image_url
+
+
+async def fetch_anime_search(query, page):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"https://astrumanimeapi.vercel.app/anime/zoro/{query}"
+        ) as response:
+            if response.status == 200:
+                return await response.json()
+            return None
+
+
+async def fetch_anime_info(anime_id):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"https://astrumanimeapi.vercel.app/anime/zoro/info?id={anime_id}"
+        ) as response:
+            if response.status == 200:
+                return await response.json()
+            return None
+
 
 class Anime(commands.Cog):
     def __init__(self, bot):
@@ -112,163 +132,90 @@ class Anime(commands.Cog):
         except Exception as e:
             await ctx.respond(f"An Error Occurred : {e}")
 
-    @anime.command(name="search", description="Get Information About An Anime")
-    async def search(self, ctx, *, name: str):
+    @anime.command(name="search", description="Search For Anime")
+    async def anime_search(self, ctx: discord.ApplicationContext, query: str):
 
         await ctx.defer()
 
-        try:
-            anime_dict = self.anilist.get_anime(anime_name=name, deepsearch=True)
-            anime_id = self.anilist.get_anime_id(anime_name)
+        query = query.replace(" ", "-")
 
-            if not anime_dict or not anime_id:
-                await ctx.respond("Sorry, Anime Not Found")
-                return
+        page = 1
+        data = await fetch_anime_search(query, page)
 
-            anime_name = anime_dict["name_english"]
-            anime_desc = anime_dict.get("desc", None)
-            starting_time = anime_dict.get("starting_time", None)
-            next_airing_ep = anime_dict.get("next_airing_ep", None)
-            season = anime_dict.get("season", None)
-            genres = ", ".join(anime_dict.get("genres", []))
-            anime_url = f"https://anilist.co/anime/{anime_id}/"
-            anime_score = anime_dict.get("average_score", None)
-            current_ep = None
+        embeds = []
 
-            if next_airing_ep:
-                current_ep = next_airing_ep["episode"] - 1
-
-            if anime_desc:
-                anime_desc = anime_desc.split("<br>")
-
-            anime_embed = discord.Embed(title=anime_name, color=0xA0DB8E)
-            anime_embed.set_image(url=anime_dict.get("banner_image", None))
-            if anime_desc:
-                anime_embed.add_field(
-                    name="Synopsis", value=anime_desc[0], inline=False
+        if data and data["results"]:
+            for anime in data["results"]:
+                embed = discord.Embed(
+                    title=anime["title"], color=discord.Color.random()
                 )
-            if anime_id:
-                anime_embed.add_field(name="Anime ID", value=anime_id, inline=True)
-            if starting_time:
-                anime_embed.add_field(
-                    name="Start Date", value=starting_time, inline=True
-                )
-            if season:
-                anime_embed.add_field(name="Season", value=season, inline=True)
-            if genres:
-                anime_embed.add_field(name="Genres", value=genres, inline=False)
-            if anime_url:
-                anime_embed.add_field(
-                    name="More Info", value=f"[AniList Page]({anime_url})", inline=False
+                embed.add_field(name="ID", value=anime["id"], inline=False)
+                embed.add_field(name="Type", value=anime["type"], inline=False)
+                embed.add_field(
+                    name="Sub / Dub",
+                    value=f"{anime['sub']} / {anime['dub']}",
+                    inline=False,
                 )
 
-            if next_airing_ep:
-                anime_embed.set_footer(
-                    text=f"Next Episode: {next_airing_ep['episode']} | Current Episode: {current_ep}"
-                )
-            else:
-                anime_embed.set_footer(text="Anime Has Finished Airing")
+                embed.set_thumbnail(url=anime["image"])
 
-            await ctx.respond(embed=anime_embed)
+                embeds.append(embed)
 
-        except Exception as e:
-            await ctx.respond("Anime Not Found")
-            print(f"Error : {e}")
+            view = AnimeNavigationButtons(embeds, page)
+            await ctx.respond(embed=embeds[0], view=view)
+        else:
+            await ctx.respond("No Anime Found For The Search Query", ephemeral=True)
 
-    @anime.command(name="watch", description="Watch Anime")
-    async def watch(self, ctx, *, name: str, episode: int = 1):
-        await ctx.defer()
 
-        try:
-            season = None
+class AnimeNavigationButtons(discord.ui.View):
+    def __init__(self, embeds, page):
+        super().__init__(timeout=60)
+        self.embeds = embeds
+        self.page = page
 
-            if name.split(" ")[-1] in [
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "0",
-            ]:
-                if name.split(" ")[-1] == "1":
-                    season = "1st"
-                elif name.split(" ")[-1] == "2":
-                    season = "2nd"
-                elif name.split(" ")[-1] == "3":
-                    season = "3rd"
-                else:
-                    season = name.split(" ")[-1] + "th"
+    async def on_timeout(self):
+        self.disable_all_items()
+        await self.message.edit(view=self)
 
-            anime_dict = self.anilist.get_anime(anime_name=name[:-1], deepsearch=True)
-            anime_name = anime_dict["name_romaji"].replace(" ", "-").lower()
-            eng_name = anime_dict["name_english"]
+    @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
+    async def previous_page(self, button, interaction):
+        if self.page > 0:
+            self.page -= 1
+            await self.update_anime_results(interaction)
 
-            cover_image = anime_dict["banner_image"]
+    @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
+    async def next_page(self, button, interaction):
+        if self.page < len(self.embeds) - 1:
+            self.page += 1
+            await self.update_anime_results(interaction)
 
-            try:
-                current_ep = anime_dict["next_airing_ep"]["episode"] - 1
+    @discord.ui.button(label="ℹ️", style=discord.ButtonStyle.primary)
+    async def anime_info(self, button, interaction):
 
-                if episode > current_ep:
-                    await ctx.respond("Episode Not Yet Aired")
-                    return
-            except:
-                current_ep = None
+        await interaction.response.defer()
 
-            name = anime_dict["name_romaji"].replace(" ", "-").lower()
+        data = await fetch_anime_info(self.embeds[self.page].fields[0].value)
 
-            if season:
-                anime_name = f"{name}-{season}-season"
+        if data:
+            embed = discord.Embed(
+                title=data["title"],
+                description=data["description"],
+                color=discord.Color.blue(),
+            )
+            embed.add_field(name="MAL ID", value=data["malID"], inline=False)
+            embed.add_field(name="Type", value=data["type"], inline=False)
+            embed.add_field(name="Status", value=data["status"], inline=False)
+            embed.add_field(name="Release", value=data["releaseDate"], inline=False)
+            embed.add_field(
+                name="Episodes", value=data["episodes"][-1]["number"], inline=False
+            )
 
-                print(anime_name)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            await interaction.followup.send("Anime Info Not Found", ephemeral=True)
 
-            url = f"https://astrumanimeapi.vercel.app/anime/gogoanime/watch/{anime_name}-episode-{episode}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-
-                        streaming_link = data.get("sources", {})
-                        streaming_link = streaming_link[-1]
-                        streaming_link = streaming_link.get("url", None)
-
-                        if streaming_link:
-                            anime_title = anime_name.replace("-", " ").capitalize()
-
-                            flask_host = "http://192.168.0.105:5000"
-                            watch_url = (
-                                f"{flask_host}/watch?stream_link={streaming_link}"
-                            )
-
-                            embed = discord.Embed(
-                                title=f"Anime: {eng_name} | Episode: {episode}",
-                                color=discord.Color.blue(),
-                            )
-
-                            embed.add_field(
-                                name="Watch Now",
-                                value=f"[Click Here]({watch_url})",
-                                inline=False,
-                            )
-
-                            embed.set_image(url=cover_image)
-
-                            await ctx.respond(embed=embed)
-
-                        else:
-                            await ctx.respond(
-                                "No Streaming Link Found For This Episode"
-                            )
-                    else:
-                        await ctx.respond(
-                            f"Failed To Fetch Streaming Link: {response.status}"
-                        )
-        except Exception as e:
-            await ctx.respond(f"An Error Occurred : {e}")
-            traceback.print_exc()
+    async def update_anime_results(self, interaction):
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
 
 def setup(bot):
