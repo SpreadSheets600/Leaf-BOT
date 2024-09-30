@@ -65,6 +65,15 @@ async def fetch_anime_info(anime_id):
                 return await response.json()
             return None
 
+async def fetch_anime_episodes(episode_id):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"https://astrumanimeapi.vercel.app/anime/zoro/watch?episodeId={episode_id}"
+        ) as response:
+            if response.status == 200:
+                return await response.json()
+            return None
+
 
 class Anime(commands.Cog):
     def __init__(self, bot):
@@ -146,28 +155,66 @@ class Anime(commands.Cog):
 
         if data and data["results"]:
             for anime in data["results"]:
-                embed = discord.Embed(
-                    title=anime["title"], color=discord.Color.random()
-                )
-                embed.add_field(name="ID", value=anime["id"], inline=False)
+                embed = discord.Embed(title=anime["title"], color=0xFCEFC1)
                 embed.add_field(name="Type", value=anime["type"], inline=False)
+                embed.add_field(name="Duration", value=anime["duration"], inline=False)
                 embed.add_field(
                     name="Sub / Dub",
                     value=f"{anime['sub']} / {anime['dub']}",
                     inline=False,
                 )
 
+                embed.set_footer(text=f"ID : {anime['id']}")
                 embed.set_thumbnail(url=anime["image"])
 
                 embeds.append(embed)
 
-            view = AnimeNavigationButtons(embeds, page)
+            view = AnimeSearchNavigationButtons(embeds, page)
             await ctx.respond(embed=embeds[0], view=view)
         else:
             await ctx.respond("No Anime Found For The Search Query", ephemeral=True)
 
+    @anime.command(name="episodes", description="Get Anime Episodes")
+    async def anime_episodes(self, ctx: discord.ApplicationContext, anime_id: str):
 
-class AnimeNavigationButtons(discord.ui.View):
+        await ctx.defer()
+
+        data = await fetch_anime_info(anime_id)
+
+        if data:
+
+            al_id = data["alID"]
+
+            anilist = Anilist()
+            anime_dict = anilist.get_anime_with_id(al_id)
+
+            cover_image = anime_dict.get("banner_image", None)
+
+            episodes = data.get("episodes", [])
+            if episodes:
+                embeds = []
+
+                for episode in episodes:
+                    embed = discord.Embed(
+                        title=episode["title"],
+                        color=0xFCEFC1,
+                    )
+
+                    embed.add_field(name="Episode Number", value=episode["number"])
+                    embed.add_field(name="Is Filler", value=episode["isFiller"])
+
+                    if cover_image:
+                        embed.set_image(url=cover_image)
+
+                    embed.set_footer(text=f"ID : {episode["id"]}")
+
+                    embeds.append(embed)
+
+                view = AnimeEpisodeNavigationButtons(embeds, 0)
+                await ctx.respond(embed=embeds[0], view=view)
+
+
+class AnimeSearchNavigationButtons(discord.ui.View):
     def __init__(self, embeds, page):
         super().__init__(timeout=60)
         self.embeds = embeds
@@ -179,40 +226,125 @@ class AnimeNavigationButtons(discord.ui.View):
 
     @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
     async def previous_page(self, button, interaction):
-        if self.page > 0:
-            self.page -= 1
-            await self.update_anime_results(interaction)
-
-    @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
-    async def next_page(self, button, interaction):
-        if self.page < len(self.embeds) - 1:
-            self.page += 1
-            await self.update_anime_results(interaction)
+        self.page -= 1
+        await self.update_anime_results(interaction)
 
     @discord.ui.button(label="ℹ️", style=discord.ButtonStyle.primary)
     async def anime_info(self, button, interaction):
 
         await interaction.response.defer()
 
-        data = await fetch_anime_info(self.embeds[self.page].fields[0].value)
+        data = await fetch_anime_info(
+            self.embeds[self.page].footer.text.split(":")[-1].strip()
+        )
 
         if data:
+            al_id = data["alID"]
+
+            anilist = Anilist()
+            anime_dict = anilist.get_anime_with_id(al_id)
+
+            anime_desc = anime_dict.get("desc", None)
+
+            if anime_desc:
+                anime_desc.replace("<i>", "").replace("</i>", "")
+                anime_desc = anime_desc.split("<br>")
+
             embed = discord.Embed(
-                title=data["title"],
-                description=data["description"],
-                color=discord.Color.blue(),
-            )
-            embed.add_field(name="MAL ID", value=data["malID"], inline=False)
-            embed.add_field(name="Type", value=data["type"], inline=False)
-            embed.add_field(name="Status", value=data["status"], inline=False)
-            embed.add_field(name="Release", value=data["releaseDate"], inline=False)
-            embed.add_field(
-                name="Episodes", value=data["episodes"][-1]["number"], inline=False
+                title=anime_dict["name_english"],
+                color=0xFCEFC1,
             )
 
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            if anime_desc:
+                embed.add_field(name="Synopsis", value=anime_desc[0], inline=False)
+            if anime_dict["genres"]:
+                embed.add_field(
+                    name="Genres", value=", ".join(anime_dict["genres"]), inline=False
+                )
+            if data["episodes"][-1]["number"]:
+                embed.add_field(
+                    name="Episodes", value=data["episodes"][-1]["number"], inline=True
+                )
+            if anime_dict["average_score"]:
+                embed.add_field(
+                    name="Average Score",
+                    value=anime_dict["average_score"],
+                    inline=True,
+                )
+
+            next_airing_ep = anime_dict.get("next_airing_ep", None)
+
+            if next_airing_ep:
+                current_ep = next_airing_ep["episode"] - 1
+
+                embed.set_footer(
+                    text=f"Next Airing Episode : {next_airing_ep['episode']} | Current Episode : {current_ep}"
+                )
+            else:
+                embed.set_footer(text="Anime Has Finished Airing")
+
+            if anime_dict["cover_image"]:
+                embed.set_image(url=anime_dict["banner_image"])
+
+            await interaction.followup.send(embed=embed)
+
         else:
-            await interaction.followup.send("Anime Info Not Found", ephemeral=True)
+            await interaction.followup.send("Anilist Data Not Found")
+
+    @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
+    async def next_page(self, button, interaction):
+        self.page = 0
+        self.page += 1
+        await self.update_anime_results(interaction)
+
+    async def update_anime_results(self, interaction):
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+
+class AnimeEpisodeNavigationButtons(discord.ui.View):
+    def __init__(self, embeds, page):
+        super().__init__(timeout=60)
+        self.embeds = embeds
+        self.page = page
+
+    async def on_timeout(self):
+        self.disable_all_items()
+        await self.message.edit(view=self)
+
+    @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
+    async def previous_page(self, button, interaction):
+        self.page -= 1
+        await self.update_anime_results(interaction)
+
+    @discord.ui.button(label="📺", style=discord.ButtonStyle.primary)
+    async def watch_episode(self, button, interaction):
+
+        await interaction.response.defer()
+
+        data = await fetch_anime_episodes(
+            self.embeds[self.page].footer.text.split(":")[-1].strip()
+        )
+
+        if data:
+            url = data["sources"][0]["url"]
+
+            flask_host = "http://192.168.0.105:5000"
+            watch_url = (
+                f"{flask_host}/watch?stream_link={url}"
+            )
+
+            embed = discord.Embed(
+                title="Watch Episode",
+                description=f"[Click Here To Watch]({watch_url})",
+                color=0xFCEFC1,
+            )
+
+            embed.
+
+    @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
+    async def next_page(self, button, interaction):
+        self.page += 1
+        await self.update_anime_results(interaction)
 
     async def update_anime_results(self, interaction):
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
