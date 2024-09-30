@@ -207,7 +207,7 @@ class Anime(commands.Cog):
 
             if anime_desc:
                 anime_desc.replace("<i>", "").replace("</i>", "")
-                anime_desc = anime_desc.split("<br>")
+                anime_desc = anime_desc.split("<br>")[0]
 
             title = anime["title"]
             if title["english"] not in [None, "null"]:
@@ -546,7 +546,6 @@ class RefreshAnime(discord.ui.View):
 
     @discord.ui.button(label="🔃", style=discord.ButtonStyle.secondary)
     async def refresh(self, button, interaction):
-
         await interaction.response.defer()
 
         data = await random_anime()
@@ -557,13 +556,12 @@ class RefreshAnime(discord.ui.View):
             anime_desc = anime.get("description", None)
 
             if anime_desc:
-                anime_desc.replace("<i>", "").replace("</i>", "")
+                anime_desc = anime_desc.replace("<i>", "").replace("</i>", "")
                 anime_desc = anime_desc.split("<br>")
 
             title = anime["title"]
-            if title["english"] not in [None, "null"]:
+            if title.get("english") not in [None, "null"]:
                 title = title["english"]
-
             else:
                 title = title["romaji"]
 
@@ -585,9 +583,11 @@ class RefreshAnime(discord.ui.View):
             else:
                 embed.set_thumbnail(url=anime["image"])
 
-            await interaction.response.edit_message(embed=embed, view=self)
+            await interaction.followup.edit_message(
+                message_id=interaction.message.id, embed=embed, view=self
+            )
         else:
-            await interaction.response.send_message("No Anime Found", ephemeral=True)
+            await interaction.followup.send("No Anime Found", ephemeral=True)
 
 
 def setup(bot):
