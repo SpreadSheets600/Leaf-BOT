@@ -545,7 +545,7 @@ class RefreshAnime(discord.ui.View):
         self.ctx = ctx
 
     @discord.ui.button(label="🔃", style=discord.ButtonStyle.secondary)
-    async def refresh(self, button, interaction):
+    async def refresh_button(self, button, interaction):
         await interaction.response.defer()
 
         data = await random_anime()
