@@ -107,6 +107,31 @@ class Anime(commands.Cog):
     anime = SlashCommandGroup(name="anime", description="Anime Commands")
 
     @anime.command(
+        name="quote",
+        description="📜 Get A Random Anime Quote",
+    )
+    async def anime_quote(self, ctx: discord.ApplicationContext):
+
+        await ctx.defer()
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://animechan.io/api/v1/quotes/random"
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    embed = discord.Embed(
+                        title="Anime Quote",
+                        description=data["data"]["content"],
+                        color=discord.Color.blurple(),
+                    )
+                    embed.set_author(name=data["data"]["character"]["name"])
+                    embed.set_footer(text=f"Anime : {data['data']['anime']['name']}")
+
+                    await ctx.respond(embed=embed)
+
+    @anime.command(
         name="waifu",
         description="👧 Get A Random Waifu Image",
     )

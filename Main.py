@@ -121,6 +121,8 @@ try:
     print("[ + ] CryptoBuy Loaded")
     bot.load_extension("COGS.Tasks")
     print("[ + ] Tasks Loaded")
+    bot.load_extension("FUN.Meme")
+    print("[ + ] Meme Loaded")
     bot.load_extension("FUN.Anime")
     print("[ + ] Anime Loaded\n")
 except Exception as e:
