@@ -3,85 +3,222 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enhanced Anime Viewer</title>
+    <title>Leaf Anime</title>
     <link
       href="https://vjs.zencdn.net/7.20.3/video-js.min.css"
       rel="stylesheet"
     />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --primary-color: #8b5cf6;
+        --background-color: #1f2937;
+        --text-color: #f3f4f6;
+      }
       body {
-        background-color: #1a1a1a;
-        color: #ffffff;
-        font-family: Arial, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
-        height: 100vh;
+        justify-content: center;
+        min-height: 100vh;
         margin: 0;
+        padding: 2rem;
+        box-sizing: border-box;
       }
-      .video-container {
-        width: 80%;
-        max-width: 1280px;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      #content-container {
+        width: calc(100% - 10rem);
+        max-width: 1600px;
+        transition: all 0.3s ease-in-out;
       }
       h1 {
-        margin-bottom: 20px;
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        color: var(--primary-color);
       }
-      .quality-selector {
-        margin-top: 20px;
+      .video-container {
+        overflow: hidden;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 2rem;
       }
-      select {
-        padding: 5px 10px;
-        font-size: 16px;
-        background-color: #333;
-        color: #fff;
-        border: 1px solid #555;
-        border-radius: 4px;
+      .video-js {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+      .vjs-theme-forest {
+        --vjs-theme-forest--primary: var(--primary-color);
+      }
+      .video-js .vjs-big-play-button {
+        background-color: rgba(139, 92, 246, 0.7);
+        border-color: var(--primary-color);
+      }
+      .video-js .vjs-control-bar {
+        background-color: rgba(31, 41, 55, 0.7);
+      }
+      .thumbnails {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      .thumbnail {
+        width: 160px;
+        height: 90px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      }
+      .thumbnail:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.5);
+      }
+      #skip-intro {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+      }
+      #skip-intro:hover {
+        background-color: #7c3aed;
+      }
+      @media (max-width: 768px) {
+        #content-container {
+          width: calc(100% - 2rem);
+        }
+        h1 {
+          font-size: 2rem;
+        }
+        .thumbnail {
+          width: 120px;
+          height: 67.5px;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Anime Leaf Ke Laude Me</h1>
-    <div class="video-container">
-      <video-js
-        id="anime-player"
-        class="video-js vjs-big-play-centered vjs-theme-city"
-        controls
-        preload="auto"
-        width="100%"
-        height="0"
-        data-setup='{"fluid": true, "playbackRates": [0.5, 1, 1.5, 2]}'
-      >
-        <source src="{{ stream_link }}" type="application/x-mpegURL" />
-      </video-js>
-    </div>
+    <div id="content-container" class="animate__animated animate__fadeIn">
+      <h1 class="animate__animated animate__bounceIn">
+        Anime Leaf Ke Laude Me
+      </h1>
+
+      <button id="skip-intro" class="animate__animated animate__fadeInUp">
+        Skip Intro
+      </button>
+
+      <div class="video-container animate__animated animate__zoomIn">
+        <video-js
+          id="anime-player"
+          class="video-js vjs-big-play-centered vjs-theme-forest"
+          controls
+          preload="auto"
+        >
+          <source src="{{ stream_link }}" type="application/x-mpegURL" />
+
+          <track
+            kind="subtitles"
+            src="{{ subtitles }}"
+            srclang="en"
+            label="English"
+            default
+          />
+        </video-js>
+      </div>
+
+      <div class="thumbnails animate__animated animate__fadeInUp">
+        <!-- Thumbnails will be dynamically added here -->
+      </div>
     </div>
 
     <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-quality-levels/2.1.0/videojs-contrib-quality-levels.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-http-source-selector/1.1.6/videojs-http-source-selector.min.js"></script>
     <script>
-      var player = videojs("anime-player");
-      player.httpSourceSelector();
+      var player = videojs("anime-player", {
+        fluid: true,
+        responsive: true,
+        playbackRates: [0.5, 1, 1.5, 2],
+      });
 
-      player.on("loadedmetadata", function () {
-        var qualityLevels = player.qualityLevels();
-        var qualitySelect = document.getElementById("quality-select");
+      const skipIntroButton = document.getElementById("skip-intro");
+      const skipDuration = 90; // 1.5 minutes in seconds
+      let videoDuration = player.duration();
 
-        for (var i = 0; i < qualityLevels.length; i++) {
-          var option = document.createElement("option");
-          option.value = i;
-          option.text = qualityLevels[i].height + "p";
-          qualitySelect.add(option);
+      // Skip intro button click event
+      skipIntroButton.addEventListener("click", () => {
+        if (player.currentTime() < skipDuration) {
+          player.currentTime(skipDuration);
         }
+      });
 
-        qualitySelect.addEventListener("change", function () {
-          for (var i = 0; i < qualityLevels.length; i++) {
-            qualityLevels[i].enabled = this.value === "auto" || i == this.value;
+      // Generate thumbnails
+      const thumbnailCount = 5;
+      const thumbnailContainer = document.querySelector(".thumbnails");
+
+      for (let i = 0; i < thumbnailCount; i++) {
+        const thumbnailTime = (videoDuration / (thumbnailCount + 1)) * (i + 1);
+        const thumbnail = document.createElement("div");
+        thumbnail.classList.add(
+          "thumbnail",
+          "animate__animated",
+          "animate__fadeIn"
+        );
+        thumbnail.style.animationDelay = `${i * 0.1}s`;
+        thumbnail.style.backgroundImage = `url(/api/placeholder/160/90)`; // Example
+        thumbnail.addEventListener("click", () => {
+          player.currentTime(thumbnailTime);
+        });
+        thumbnailContainer.appendChild(thumbnail);
+      }
+
+      // Add spacebar to play/pause
+      document.addEventListener("keydown", function (e) {
+        if (e.code === "Space") {
+          if (player.paused()) {
+            player.play();
+          } else {
+            player.pause();
           }
+        } else if (e.code === "ArrowRight") {
+          player.currentTime(player.currentTime() + 5); // skip 5 seconds forward
+        } else if (e.code === "ArrowLeft") {
+          player.currentTime(player.currentTime() - 5); // skip 5 seconds back
+        }
+      });
+
+      // Show preview on hover
+      player.on("loadedmetadata", () => {
+        player.thumbnails({
+          vtt: "/path-to-thumbnails.vtt", // Change to your .vtt file
+          basePath: "/api/thumbnail", // Change to your API base path
         });
       });
+
+      // Responsive design
+      function handleResize() {
+        const contentContainer = document.getElementById("content-container");
+        if (window.innerWidth <= 768) {
+          contentContainer.style.width = "calc(100% - 2rem)";
+        } else {
+          contentContainer.style.width = "calc(100% - 10rem)";
+        }
+      }
+
+      window.addEventListener("resize", handleResize);
+      handleResize();
     </script>
   </body>
 </html>

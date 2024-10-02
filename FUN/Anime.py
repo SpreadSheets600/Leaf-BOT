@@ -72,7 +72,7 @@ async def fetch_anime_info(anime_id):
 async def fetch_anime_episodes(episode_id):
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            f"https://astrumanimeapi.vercel.app/anime/zoro/watch?episodeId={episode_id}"
+            f"https://astrumanimeapi.vercel.app/anime/zoro/watch?episodeId={episode_id}&server=vidstreaming"
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -480,9 +480,25 @@ class AnimeEpisodeNavigationButtons(discord.ui.View):
 
         if data:
             url = data["sources"][0]["url"]
+            subtitle_links = data["subtitles"]
 
-            flask_host = "http://192.168.0.105:5000"
-            watch_url = f"{flask_host}/watch?stream_link={url}"
+            for subtitle in subtitle_links:
+                subtitle_lang = subtitle["lang"]
+                if subtitle_lang == "English":
+                    subtitle_links = subtitle["url"]
+
+            thumbnails_url = data["subtitles"][-1]["url"]
+            intro_start = data["intro"]["start"]
+            intro_end = data["intro"]["end"]
+            outro_start = data["outro"]["start"]
+            outro_end = data["outro"]["end"]
+
+            flask_host = "http://localhost:5000"
+            watch_url = (
+                f"{flask_host}/watch?stream_link={url}&subtitle_url={subtitle_links}"
+                f"&thumbnails_url={thumbnails_url}&intro_start={intro_start}"
+                f"&intro_end={intro_end}&outro_start={outro_start}&outro_end={outro_end}"
+            )
 
             embed = discord.Embed(
                 title="Watch Episode",

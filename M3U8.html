@@ -3,33 +3,265 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HLS Video Playback</title>
-    <!-- Video.js CSS -->
-    <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet" />
+    <title>Leaf Anime</title>
+    <link
+      href="https://vjs.zencdn.net/7.20.3/video-js.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #8b5cf6;
+        --background-color: #1f2937;
+        --text-color: #f3f4f6;
+      }
+      body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 2rem;
+        box-sizing: border-box;
+      }
+      #content-container {
+        width: calc(100% - 10rem);
+        max-width: 1600px;
+        transition: all 0.3s ease-in-out;
+      }
+      h1 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        color: var(--primary-color);
+      }
+      .video-container {
+        overflow: hidden;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 2rem;
+      }
+      .video-js {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+      .vjs-theme-forest {
+        --vjs-theme-forest--primary: var(--primary-color);
+      }
+      .video-js .vjs-big-play-button {
+        background-color: rgba(139, 92, 246, 0.7);
+        border-color: var(--primary-color);
+      }
+      .video-js .vjs-control-bar {
+        background-color: rgba(31, 41, 55, 0.7);
+      }
+      .thumbnails {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      .thumbnail {
+        width: 160px;
+        height: 90px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      }
+      .thumbnail:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.5);
+      }
+      #skip-intro {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(139, 92, 246, 0.7);
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      @media (max-width: 768px) {
+        #content-container {
+          width: calc(100% - 2rem);
+        }
+        h1 {
+          font-size: 2rem;
+        }
+        .thumbnail {
+          width: 120px;
+          height: 67.5px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <!-- Video.js Player -->
-    <video
-      id="my-video"
-      class="video-js vjs-default-skin"
-      controls
-      preload="auto"
-      width="640"
-      height="360"
-    >
-      <source
-        src="https://fds.biananset.net/_v7/d8e56d406f04d29b74b4e03042fca324d71f0cd196c65f1fcb9c6d27377df7bd17b6ce13536ee8f21bbfe92902b58f639455ccab8671ba0aa00782c152a6b8084cc518d7e32b2415bbe87dad7d55eb0736a3a15011d0533eceafe7a5841fde57bf868c98b776c63a5d23bbb687bf37df7365905359f738d51b40f6138f9e5d77/master.m3u8"
-        type="application/x-mpegURL"
-      />
-    </video>
+    <div id="content-container" class="animate__animated animate__fadeIn">
+      <h1 class="animate__animated animate__bounceIn">
+        Anime Leaf Ke Laude Me
+      </h1>
 
-    <!-- Video.js JavaScript -->
-    <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
-    <!-- Video.js HLS Plugin -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.15.0/videojs-contrib-hls.min.js"></script>
+      <div class="video-container animate__animated animate__zoomIn">
+        <video-js
+          id="anime-player"
+          class="video-js vjs-big-play-centered vjs-theme-forest"
+          controls
+          preload="auto"
+        >
+          <source src="{{ stream_link }}" type="application/x-mpegURL" />
+          <track
+            kind="subtitles"
+            src="{{ subtitles }}"
+            srclang="en"
+            label="English"
+          />
+        </video-js>
+        <button id="skip-intro">Skip Intro</button>
+      </div>
+
+      <div class="thumbnails animate__animated animate__fadeInUp">
+        <!-- Thumbnails will be dynamically added here -->
+      </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
     <script>
-      var player = videojs("my-video");
-      player.play();
+      var player = videojs("anime-player", {
+        fluid: true,
+        responsive: true,
+        playbackRates: [0.5, 1, 1.5, 2],
+      });
+
+      // Generate thumbnails
+      const thumbnailCount = 5;
+      const thumbnailContainer = document.querySelector(".thumbnails");
+      const videoDuration = player.duration();
+
+      for (let i = 0; i < thumbnailCount; i++) {
+        const thumbnailTime = (videoDuration / (thumbnailCount + 1)) * (i + 1);
+        const thumbnail = document.createElement("div");
+        thumbnail.classList.add(
+          "thumbnail",
+          "animate__animated",
+          "animate__fadeIn"
+        );
+        thumbnail.style.animationDelay = `${i * 0.1}s`;
+        thumbnail.style.backgroundImage = `url(/api/placeholder/160/90)`;
+        thumbnail.addEventListener("click", () => {
+          player.currentTime(thumbnailTime);
+        });
+        thumbnailContainer.appendChild(thumbnail);
+      }
+
+      // Skip intro button
+      const skipIntroButton = document.getElementById("skip-intro");
+      const introDuration = 90; // 1.5 minutes in seconds
+
+      skipIntroButton.addEventListener("click", () => {
+        player.currentTime(introDuration);
+      });
+
+      player.on("timeupdate", () => {
+        if (player.currentTime() < introDuration) {
+          skipIntroButton.style.display = "block";
+        } else {
+          skipIntroButton.style.display = "none";
+        }
+      });
+
+      // Keyboard controls
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          if (player.paused()) {
+            player.play();
+          } else {
+            player.pause();
+          }
+          e.preventDefault();
+        } else if (e.code === "ArrowLeft") {
+          player.currentTime(player.currentTime() - 5);
+        } else if (e.code === "ArrowRight") {
+          player.currentTime(player.currentTime() + 5);
+        }
+      });
+
+      // Preview on hover
+      player.ready(() => {
+        const progressControl = player.controlBar.progressControl;
+        const tooltipDiv = document.createElement("div");
+        tooltipDiv.className = "vjs-tooltip";
+        tooltipDiv.style.position = "absolute";
+        tooltipDiv.style.bottom = "100%";
+        tooltipDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        tooltipDiv.style.color = "white";
+        tooltipDiv.style.padding = "5px";
+        tooltipDiv.style.borderRadius = "4px";
+        tooltipDiv.style.fontSize = "12px";
+        tooltipDiv.style.display = "none";
+        progressControl.el().appendChild(tooltipDiv);
+
+        progressControl.on("mousemove", function (event) {
+          const mousePosition = progressControl.getMousePosition(event);
+          const seekBarEl = progressControl.seekBar.el();
+          const seekBarRect = seekBarEl.getBoundingClientRect();
+          const seekBarWidth = seekBarRect.width;
+          const mouseX = mousePosition.x - seekBarRect.left;
+          const seekTime = (mouseX / seekBarWidth) * player.duration();
+
+          tooltipDiv.style.left = `${mouseX}px`;
+          tooltipDiv.style.display = "block";
+          tooltipDiv.textContent = formatTime(seekTime);
+
+          // Here you would typically update the preview image
+          // For this example, we'll just use a placeholder
+          tooltipDiv.style.backgroundImage = `url(/api/placeholder/160/90)`;
+          tooltipDiv.style.backgroundSize = "cover";
+          tooltipDiv.style.width = "160px";
+          tooltipDiv.style.height = "90px";
+        });
+
+        progressControl.on("mouseout", function () {
+          tooltipDiv.style.display = "none";
+        });
+      });
+
+      function formatTime(seconds) {
+        const date = new Date(seconds * 1000);
+        const hh = date.getUTCHours();
+        const mm = date.getUTCMinutes();
+        const ss = date.getUTCSeconds().toString().padStart(2, "0");
+        if (hh) {
+          return `${hh}:${mm.toString().padStart(2, "0")}:${ss}`;
+        }
+        return `${mm}:${ss}`;
+      }
+
+      // Responsive design
+      function handleResize() {
+        const contentContainer = document.getElementById("content-container");
+        if (window.innerWidth <= 768) {
+          contentContainer.style.width = "calc(100% - 2rem)";
+        } else {
+          contentContainer.style.width = "calc(100% - 10rem)";
+        }
+      }
+
+      window.addEventListener("resize", handleResize);
+      handleResize();
     </script>
   </body>
 </html>

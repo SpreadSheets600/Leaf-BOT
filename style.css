@@ -1,0 +1,33 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    text-align: center;
+}
+
+video {
+    margin-bottom: 20px;
+}
+
+.controls, .subtitle-settings {
+    margin: 10px 0;
+}
+
+.thumbnail {
+    width: 100px;
+    margin: 5px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.thumbnail:hover {
+    opacity: 1;
+}
